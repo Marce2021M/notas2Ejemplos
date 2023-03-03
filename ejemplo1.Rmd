@@ -1,0 +1,29 @@
+
+
+
+# First we are gonna load the packages
+
+```{r}
+# Load necessary packages
+library(rstan)
+library(coda)
+
+# Data
+n <- 10
+credito <- c(rep(1, n/2), rep(0, n/2))
+
+# Compile the model which is in Ej1.stan
+stan_model <- stan_model(model_code = "Ej1.stan")
+
+# Fit the model
+fit <- sampling(stan_model, data = list(n = n, x = credito), 
+                iter = 5000, chains = 2, warmup = 500, thin = 1)
+
+# Extract the posterior predictive samples for x1
+samples <- as.matrix(fit)
+post_pred_samples <- samples[, grep("x1", colnames(samples))]
+
+# Summary of posterior predictive results
+summary(as.mcmc(post_pred_samples))
+
+```

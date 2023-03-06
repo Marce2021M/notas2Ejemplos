@@ -6,13 +6,15 @@ library(rstan)
 library(coda)
 library(R2jags)
 
+
+setwd("/home/rstudio/notas3Ejemplos")
+source("../DBDA2Eprograms/DBDA2E-utilities.R")
+
 # set the working directory
 
-setwd("/home/rstudio/notas2Ejemplos")
 ```
 
-## primero lo haremos en jaggs
-
+# Trabajeremos con lo siguiente
 ```{r}
 #-Reading data-
 utilidad<-c(212, 207, 210,
@@ -22,6 +24,12 @@ n<-length(utilidad)
 
 #-Defining data-
 data<-list("n"=n,"x"=utilidad)
+
+```
+
+## primero lo haremos en jaggs
+```{r}
+
 
 #-Defining inits-
 inits<-function(){list(mu=0,sig=1,x1=0)}
@@ -89,5 +97,55 @@ print(out.dic)
 ## ahora lo haremos con rstan
 
 ```{r}
+set.seed(1)
+#-Defining inits-
+inits<-function(){list(mu=0,sig=1)}
+# Compiling model
+stan_model <- stan_model("Ej2.stan")
+
+# Running the model
+stan_fit <- sampling(stan_model, data = data, init = inits, 
+                      pars = c("mu", "sig"), chains = 2, 
+                      iter = 5000, warmup = 500)
+
+# Monitoring chain
+print(stan_fit)
+
+# Traceplot
+# Extract MCMC chains from stanfit object
+chains <- as.matrix(stan_fit)
+
+# Extract relevant columns for traceplot
+theta_chains <- chains[, "mu"]
+phi_chains <- chains[, "sig"]
+
+# Plot trace and density plots
+traceplot(as.mcmc(theta_chains))
+traceplot(as.mcmc(phi_chains))
+
+
+# Posterior summary
+summary(stan_fit)
+
+# Computing DIC  (CHECK)
+dic <- stan_fit@simoutput$diagnostics$summary$DIC
+print(dic)
+
+
+# Predictive posterior
+ppc <- posterior_predict(stan_fit)
+y_pred <- colMeans(ppc)
+print(y_pred)
+```
+
+## comparando convergencia de otra forma
+
+```{r}
+# Convert stan format to coda format:
+mcmcCoda = mcmc.list( lapply( 1:ncol(stan_fit) ,
+                              function(x) { mcmc(as.array(stan_fit)[,x,]) } ) )
+# Graph chain diagnostics using DBDA2E function:
+
+diagMCMC( mcmcCoda , parName=c("sig") )
 
 ```

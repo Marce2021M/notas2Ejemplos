@@ -1,0 +1,93 @@
+# First we are gonna load the packages
+
+```{r}
+# Load necessary packages
+library(rstan)
+library(coda)
+library(R2jags)
+
+# set the working directory
+
+setwd("/home/rstudio/notas2Ejemplos")
+```
+
+## primero lo haremos en jaggs
+
+```{r}
+#-Reading data-
+utilidad<-c(212, 207, 210,
+196, 223, 193,
+196, 210, 202, 221)
+n<-length(utilidad)
+
+#-Defining data-
+data<-list("n"=n,"x"=utilidad)
+
+#-Defining inits-
+inits<-function(){list(mu=0,sig=1,x1=0)}
+
+#-Selecting parameters to monitor-
+parameters<-c("mu","sig","x1")
+
+#-Running code-
+#OpenBUGS
+#ej2.sim<-bugs(data,inits,parameters,model.file="Ej2.txt",
+#              n.iter=5000,n.chains=2,n.burnin=500)
+#JAGS
+ej2.sim<-jags(data,inits,parameters,model.file="Ej2.txt",
+              n.iter=5000,n.chains=2,n.burnin=500,n.thin=1)
+
+#-Monitoring chain-
+
+#Traza de la cadena
+traceplot(ej2.sim)
+
+#Multiples cadenas
+
+#OpenBUGS
+#out.a<-ej2.sim$sims.array
+
+#JAGS
+out.a<-ej2.sim$BUGSoutput$sims.array
+
+z1<-out.a[,1,1]
+z2<-out.a[,2,1]
+par(mfrow=c(3,2))
+plot(z1,type="l",col="grey50")
+lines(z2,col="firebrick2")
+y1<-cumsum(z1)/(1:length(z1))
+y2<-cumsum(z2)/(1:length(z2))
+ymin<-min(y1,y2)
+ymax<-max(y1,y2)
+plot(y1,type="l",col="grey50",ylim=c(ymin,ymax))
+lines(y2,col="firebrick2",ylim=c(ymin,ymax))
+hist(z1,freq=FALSE,col="grey50")
+hist(z2,freq=FALSE,col="firebrick2")
+acf(z1)
+acf(z2)
+
+#Resumen (estimadores)
+#OpenBUGS
+#out.sum<-ej2.sim$summary
+
+#JAGS
+out.sum<-ej2.sim$BUGSoutput$summary
+
+print(out.sum)
+
+#DIC
+#OpenBUGS
+#out.dic<-ej2.sim$DIC
+
+#JAGS
+out.dic<-ej2.sim$BUGSoutput$DIC
+
+print(out.dic)
+
+```
+
+## ahora lo haremos con rstan
+
+```{r}
+
+```

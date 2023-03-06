@@ -7,44 +7,118 @@
 # Load necessary packages
 library(rstan)
 library(coda)
-library(cmdstanr)
+library(R2jags)
+
+# set the working directory
 
 setwd("/home/rstudio/notas2Ejemplos")
 
-# Data
-n <- 10
-credito <- c(rep(1, n/2), rep(0, n/2))
+```
+
+
+# Usaremos la paquetería de jaggs
+
+
+```{r}
+#--- Ejemplo 1---
+#-Reading data-
+n<-10
+credito<-c(rep(1,n/2),rep(0,n/2))   # primera parte
+credito<-c(rep(1,n*0.9),rep(0,n*0.1))       # segunda parte
+credito<-c(rep(0,n*0.9),rep(1,n*0.1))       # tercera parte
+
+#-Defining data-
+data<-list("n"=n,"x"=credito)
+
+#-Defining inits-
+inits<-function(){list(theta=0.5,x1=rep(1,2))}  # primera parte
+inits<-function(){list(lambda=0)}               # segunda parte
+inits<-function(){list(theta=0.5,eta=1)}        # tercera parte
+
+#-Selecting parameters to monitor-
+parameters<-c("theta","x1")                     # primera parte
+parameters<-c("theta","eta")                    # tercera parte
+
+```
+
+```{r}
+#-Running code-
+#OpenBUGS
+#ej1.sim<-bugs(data,inits,parameters,model.file="Ej1.txt",
+#             n.iter=5000,n.chains=2,n.burnin=500,n.thin=1)
+#JAGS
+ej1.sim<-jags(data,inits,parameters,model.file="Ej1.txt",
+              n.iter=5000,n.chains=2,n.burnin=500,n.thin=1)     #corriendo la cadena
+
+#Traza de la cadena
+traceplot(ej1.sim)
+
+#Multiples cadenas
+
+#OpenBUGS
+#out.a<-ej1.sim$sims.array
+
+#JAGS
+out.a<-ej1.sim$BUGSoutput$sims.array
+
+# gráficas
+z1<-out.a[,1,2]
+z2<-out.a[,2,2]
+par(mfrow=c(3,2))
+plot(z1,type="l",col="grey50")
+lines(z2,col="firebrick2")
+y1<-cumsum(z1)/(1:length(z1))
+y2<-cumsum(z2)/(1:length(z2))
+ymin<-min(y1,y2)
+ymax<-max(y1,y2)
+plot(y1,type="l",col="grey50",ylim=c(ymin,ymax))
+lines(y2,col="firebrick2",ylim=c(ymin,ymax))
+hist(z1,freq=FALSE,col="grey50")
+hist(z2,freq=FALSE,col="firebrick2")
+acf(z1)
+acf(z2)
+
+
+```
+
+```{r}
+#Resumen (estimadores)
+#OpenBUGS
+#out.sum<-ej1.sim$summary
+
+#JAGS
+out.sum<-ej1.sim$BUGSoutput$summary
+
+print(out.sum)
+
+#DIC
+#OpenBUGS
+out.dic<-ej1.sim$DIC
+
+#JAGS
+out.dic<-ej1.sim$BUGSoutput$DIC
+
+print(out.dic)
+```
+
+# Ahora realizaremos lo mismo con la paquetería de rstan
+
+```{r}
+#-Reading data-
+n<-10
+credito<-c(rep(1,n/2),rep(0,n/2))   # primera parte
+credito<-c(rep(1,n*0.9),rep(0,n*0.1))       # segunda parte
+credito<-c(rep(0,n*0.9),rep(1,n*0.1))       # tercera parte
 
 # Compile the model which is in Ej1.stan
 
 model_stan <- stan_model("Ej1.stan")
 
-
-
 # Fit the model
-fit <- sampling(model_stan, data = list(n = n, x = credito), 
+fit <- sampling(model_stan, data = list(n = n, y = credito), 
                 iter = 10000, chains = 2, warmup = 500, thin = 1)
 
-# Extract the posterior predictive samples for x1
-samples <- as.matrix(fit)
-post_pred_samples <- samples[, grep("x1", colnames(samples))]
+# checar qué hace
 
-# Summary of posterior predictive results
-summary(as.mcmc(post_pred_samples))
-
-#traceplot 
-
-library(bayesplot)
-
-# Create traceplot
-stan_trace(fit, pars = c("theta"))
-
-#DIC
-
-library(loo)
-
-# Calculate DIC using loo package
-dic <- loo(fit)
-print(dic)
 
 ```
